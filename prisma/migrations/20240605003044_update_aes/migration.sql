@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Debitur" ALTER COLUMN "pokok" SET DATA TYPE TEXT,
+ALTER COLUMN "no_rekening" SET DATA TYPE TEXT;

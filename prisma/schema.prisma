@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id_rm     String   @id @default(uuid())
+  nama      String
+  pn        Int   @unique
+  password  String
+  role      String   @default("user")
+  penagihans Penagihan[]
+  pemberkasans Pemberkasan[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+model Debitur {
+  id_debitur    String   @id @default(uuid())
+  kode_debitur  Int   
+  kode_uker     Int
+  nama_debitur  String
+  no_rekening   String
+  segmen        String
+  tgl_charge    String
+  pokok         String
+  penagihan     Penagihan[]
+  pemberkasan   Pemberkasan[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Penagihan {
+  id_penagihan  String      @id @default(uuid())
+  jml_ditagih   Int
+  kolektibitas  Kolektibitas @default(Kol_1)
+  user          User?       @relation(fields: [userId], references: [id_rm])
+  userId        String?
+  debitur       Debitur?    @relation(fields: [debiturId], references: [id_debitur])
+  debiturId     String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+
+enum Kolektibitas {
+  Kol_1
+  Kol_2
+  Kol_3
+  Kol_4
+  Kol_5
+}
+
+model Pemberkasan {
+  id_pemberkasan  String      @id @default(uuid())
+  tgl_act         String
+  no_shm          Int
+  npwp            Int
+  nl              String
+  alm_shm         String
+  pic             String
+  tgl_target      String
+  progres         String
+  bln_lelang      String
+  tgl_lelang      String
+  no_laku_lelang  Int
+  limit_lelang    String
+  info_lelang     String
+  tgl_up_info_lelang String
+  lokasi_nasabah  String
+  alamat_nasabah  String
+  foto_depan      String
+  foto_kiri       String
+  foto_kanan      String
+  foto_dalam_rumah1 String
+  foto_dalam_rumah2 String
+  foto_dalam_rumah3 String
+  tgl_ots         String
+  rm_ots          String
+  agunan          String
+  pemasaran_jaminan String
+    user          User?       @relation(fields: [userId], references: [id_rm])
+  userId        String?
+  debitur       Debitur?    @relation(fields: [debiturId], references: [id_debitur])
+  debiturId     String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+} 

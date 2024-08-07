@@ -7,7 +7,12 @@ const { secret_key, secret_iv, ecnryption_method } = config;
 if (!secret_key || !secret_iv || !ecnryption_method) {
   throw new Error("secretKey, secretIV, and ecnryptionMethod are required");
 } else {
-  console.log(chalk.green("Konfigurasi AES ditemukan: menggunakan metode enkripsi", ecnryption_method));
+  console.log(
+    chalk.green(
+      "Konfigurasi AES ditemukan: menggunakan metode enkripsi",
+      ecnryption_method
+    )
+  );
 }
 
 // Generate secret hash with crypto to use for encryption
@@ -22,7 +27,9 @@ const encryptionIV = crypto
   .digest("hex")
   .substring(0, 16);
 
-console.log(chalk.green("Kunci dan IV untuk enkripsi telah berhasil dihasilkan."));
+console.log(
+  chalk.green("Kunci dan IV untuk enkripsi telah berhasil dihasilkan.")
+);
 
 // Encrypt data
 export function encryptData(data) {
@@ -43,10 +50,9 @@ export function decryptData(encryptedData) {
     key,
     encryptionIV
   );
-  const decryptedData = (
+  const decryptedData =
     decipher.update(buff.toString("utf8"), "hex", "utf8") +
-    decipher.final("utf8")
-  ); // Decrypts data and converts to utf8
+    decipher.final("utf8"); // Decrypts data and converts to utf8
   console.log(chalk.green("Data telah didekripsi."));
   return decryptedData;
 }

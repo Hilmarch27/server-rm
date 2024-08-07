@@ -1,14 +1,13 @@
 import prisma from "../utils/prismaClient.js";
 
-export const getDebitursByLoggedInUser = async (pn) => {
+export const getDebitursByLoggedInUser = async (userId) => {
   return prisma.debitur.findMany({
-    where: { kode_debitur: pn },
+    where: { userId: userId }, // Ganti pencarian berdasarkan userId
   });
 };
-
 export const getDebitursByNama = async (nama_debitur) => {
   return prisma.debitur.findMany({
-    where: { namaDebitur: nama_debitur },
+    where: { nama_debitur: nama_debitur }, // Field yang sesuai dengan schema
   });
 };
 
@@ -18,18 +17,18 @@ export const addMultipleDebitur = async (debiturs) => {
   });
 };
 
-export const updateDebiturService = async (id, klasifikasiEc) => {
+
+export const updateKlasifikasiEcService = async (id, klasifikasiEc) => {
   try {
     const updatedDebitur = await prisma.debitur.update({
-      where: { id_debitur: id },
-      data: { klasifikasiEc },
+      where: { id_debitur: id }, // Menggunakan id_debitur sesuai dengan Prisma schema
+      data: { klasifikasiEc }, // Mengupdate field klasifikasiEc
     });
     return updatedDebitur;
   } catch (error) {
     throw new Error("Error memperbarui debitur: " + error.message);
   }
 };
-
 
 // activity
 export const createAct = async (actFields) => {
@@ -50,8 +49,54 @@ export const createAct = async (actFields) => {
   return act;
 };
 
-export const getActByDebiturId = async (debiturId) => {
+export const updateAct = async (actId, actFields) => {
+  const { debiturId, userId, ...restFields } = actFields;
+
+  const act = await prisma.act.update({
+    where: { id_act: actId },
+    data: {
+      ...restFields,
+      debitur: {
+        connect: { id_debitur: debiturId },
+      },
+      user: {
+        connect: { id_rm: userId },
+      },
+    },
+  });
+
+  return act;
+};
+
+export const deleteAct = async (actId) => {
+  const act = await prisma.act.delete({
+    where: { id_act: actId },
+  });
+  return act;
+};
+
+export const getActByDebiturId = async (userId) => {
   return prisma.act.findMany({
-    where: { debiturId },
+    where: {
+      userId,
+    },
+    include: {
+      debitur: {
+        select: {
+          branchCode: true,
+          branchOffice: true,
+          uker: true,
+          namaDebitur: true,
+          nomorRekening: true,
+          outStanding: true,
+          noTelp: true,
+        },
+      },
+      user: {
+        select: {
+          id_rm: true,
+        },
+      },
+    },
   });
 };

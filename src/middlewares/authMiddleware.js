@@ -7,6 +7,7 @@ import {
   verifyAccessToken,
   verifyRefreshToken,
 } from "../utils/jwtUtils.js";
+import logger from "../utils/logger.js";
 
 const prisma = new PrismaClient();
 
@@ -16,6 +17,7 @@ async function authenticateUser(req, res, next) {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      logger.error("Authentication token is missing or invalid format");
       return res
         .status(401)
         .json({ message: "Authentication token is required" });
@@ -23,10 +25,10 @@ async function authenticateUser(req, res, next) {
 
     // Dapatkan token dari header Authorization
     const token = authHeader.split(" ")[1];
-
+    logger.info("Token received:", token);
     // Verifikasi token akses JWT
     const decodedAccessToken = verifyAccessToken(token);
-
+    logger.info("Decoded access token:", decodedAccessToken);
     // Ambil ID pengguna dari token akses
     const userId = decodedAccessToken.userId;
 
@@ -34,6 +36,7 @@ async function authenticateUser(req, res, next) {
     const user = await prisma.user.findUnique({ where: { id_rm: userId } });
 
     if (!user) {
+      logger.error("User not found");
       return res.status(401).json({ message: "User not found" });
     }
 

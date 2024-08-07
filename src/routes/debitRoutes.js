@@ -1,7 +1,16 @@
 // src/routes/authRoutes.js
 
 import express from "express";
-import { addMultipleDebiturController, createActController, getActByDebiturIdController, getDebitursByLoggedInUserController, getDebitursByNamaController, updateDebitur } from "../controllers/debiturController.js";
+import {
+  createMultipleDebiturController,
+  deleteActController,
+  getActByDebiturIdController,
+  getDebitursByLoggedInUserController,
+  getDebitursByNamaController,
+  updateActController,
+  updateKlasifikasiEcController,
+} from "../controllers/debiturController.js";
+import { createActController, getDebiturWithActsController } from "../controllers/activityController.js";
 import { authenticateUser } from "../middlewares/authMiddleware.js";
 import {uploadFields} from "../middlewares/multer.js";
 
@@ -17,17 +26,35 @@ const fields = [
 ];
 
 router.get("/debiturs", authenticateUser, getDebitursByLoggedInUserController);
-router.get("/debiturs/:nama", getDebitursByNamaController);
-router.post("/multiple-debiturs", addMultipleDebiturController);
-router.put("/update-debitur/:id", updateDebitur);
+router.get("/debiturs/:nama", authenticateUser, getDebitursByNamaController);
+router.post("/create-debiturs", authenticateUser, createMultipleDebiturController);
+router.put(
+  "/klasifikasi-ec/:id",
+  authenticateUser,
+  updateKlasifikasiEcController
+);
 
 // activity
 router.post(
-  "/add-act",
+  "/create-act",
   authenticateUser,
   uploadFields(fields),
   createActController
+); 
+
+router.get("/get-act", authenticateUser, getDebiturWithActsController);
+
+
+
+router.put(
+  "/update-act/:id",
+  authenticateUser,
+  uploadFields(fields),
+  updateActController
 );
-router.get("/get-act", getActByDebiturIdController);
+
+router.delete("/delete-act/:actId", deleteActController);
+
+
 
 export default router;

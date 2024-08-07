@@ -2,28 +2,33 @@ import {
   getDebitursByLoggedInUser,
   getDebitursByNama,
   addMultipleDebitur,
-  updateDebiturService,
   createAct,
   getActByDebiturId,
+  updateAct,
+  deleteAct,
+  updateKlasifikasiEcService,
 } from "../services/debiturService.js";
 import { decryptData, encryptData } from "../utils/aes.js"; 
-import actRawData from "../utils/data/actData.js";
 import path from "path";
+import logger from "../utils/logger.js";
 
 
 export async function getDebitursByLoggedInUserController(req, res) {
   try {
-    const pn = req.user.pn;
+    // Ambil id_rm dari objek user yang sudah ada di req
+    const userId = req.user.id_rm;
 
-    console.log("User's PN:", pn);
+    console.log("User's ID RM:", userId);
 
-    const debiturs = await getDebitursByLoggedInUser(pn);
+    // Panggil fungsi service dengan userId
+    const debiturs = await getDebitursByLoggedInUser(userId);
 
     console.log("Debiturs List found:", debiturs.length);
 
+    // Dekripsi nomor_rekening setiap debitur
     const serializedDebiturs = debiturs.map((debitur) => ({
       ...debitur,
-      nomorRekening: decryptData(debitur.nomorRekening), // Dekripsi no_rekening
+      nomor_rekening: decryptData(debitur.nomor_rekening), // Dekripsi no_rekening
     }));
 
     res.status(200).json(serializedDebiturs);
@@ -35,14 +40,15 @@ export async function getDebitursByLoggedInUserController(req, res) {
 
 export async function getDebitursByNamaController(req, res) {
   try {
-    const { nama } = req.params;
+    const { nama } = req.params; // Ambil parameter nama dari URL
     const decodedNama = decodeURIComponent(nama); // Dekode parameter nama debitur
 
-    const debiturs = await getDebitursByNama(decodedNama);
+    const debiturs = await getDebitursByNama(decodedNama); // Ambil debiturs berdasarkan nama
 
+    // Dekripsi nomor_rekening setiap debitur
     const serializedDebiturs = debiturs.map((debitur) => ({
       ...debitur,
-      nomorRekening: decryptData(debitur.nomorRekening), // Dekripsi no_rekening
+      nomor_rekening: decryptData(debitur.nomor_rekening), // Dekripsi no_rekening
     }));
 
     console.log("Debitur detail:", decodedNama);
@@ -53,44 +59,59 @@ export async function getDebitursByNamaController(req, res) {
   }
 }
 
-export const addMultipleDebiturController = async (req, res) => {
-  const debiturs = req.body;
+export async function createMultipleDebiturController(req, res) {
+  try {
+    // Ambil data debitur dari request body
+    const { debiturs } = req.body;
 
-  if (!Array.isArray(debiturs)) {
-    return res
-      .status(400)
-      .json({ error: "Invalid data format. Expected an array of debiturs." });
+    // Ambil userId dari objek user yang sudah ada di req
+    const userId = req.user?.id_rm;
+
+    console.log("User ID from request:", userId); // Tambahkan log untuk debug
+
+    // Validasi data debitur
+    if (!Array.isArray(debiturs) || debiturs.length === 0) {
+      return res.status(400).json({ message: "Invalid debitur data" });
+    }
+
+    // Enkripsi nomor_rekening setiap debitur
+    const encryptedDebiturs = debiturs.map((debitur) => ({
+      ...debitur,
+      nomor_rekening: encryptData(debitur.nomor_rekening),
+      userId, // Menambahkan userId yang diambil dari req.user
+    }));
+
+    console.log("Encrypted Debiturs:", encryptedDebiturs); // Tambahkan log untuk debug
+
+    // Tambahkan debitur ke database
+    const result = await addMultipleDebitur(encryptedDebiturs);
+
+    res.status(201).json({
+      message: "Debiturs created successfully",
+      count: result.count,
+    });
+  } catch (error) {
+    console.error("Error creating debiturs:", error);
+    res.status(500).json({ message: "Failed to create debiturs" });
   }
+}
 
-  const formattedDebiturs = debiturs.map((debitur) => {
-    let formattedDebitur = { ...debitur };
-    formattedDebitur.nomorRekening = encryptData(
-      formattedDebitur.nomorRekening.toString()
-    ); // Enkripsi no_rekening
-    return formattedDebitur;
-  });
+export const updateKlasifikasiEcController = async (req, res) => {
+  const { id } = req.params; // Mengambil id dari parameter URL
+  const { klasifikasiEc } = req.body; // Mengambil klasifikasiEc dari request body
 
   try {
-    const newDebiturs = await addMultipleDebitur(formattedDebiturs);
-
-    res.status(201).json({ success: true, count: newDebiturs.count });
+    const updatedDebitur = await updateKlasifikasiEcService(id, klasifikasiEc); // Memanggil service untuk memperbarui data
+    res
+      .status(200)
+      .json({
+        message: "Klasifikasi berhasil diperbarui",
+        data: updatedDebitur,
+      }); // Mengirimkan respons yang sesuai
+    console.log("Klasifikasi updated:", updatedDebitur.klasifikasiEc); // Logging untuk debugging
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "An error occurred while adding debiturs." });
-  }
-};
-
-export const updateDebitur = async (req, res) => {
-  const { id } = req.params;
-  const { klasifikasiEc } = req.body;
-
-  try {
-    const updatedDebitur = await updateDebiturService(id, klasifikasiEc);
-    res.status(200).json({ message: "Klasifikasi berhasil diperbarui", data: updatedDebitur });
-    console.log("Klasifikasi updated:", updatedDebitur.klasifikasiEc);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ message: "Terjadi kesalahan pada server" });
+    console.error(error.message); // Logging error untuk debugging
+    res.status(500).json({ message: "Terjadi kesalahan pada server" }); // Mengirimkan respons error
   }
 };
 
@@ -124,7 +145,7 @@ export const createActController = async (req, res) => {
     for (let i = 1; i <= 6; i++) {
       if (files[`fotoAgunan${i}`]) {
         actFields[`fotoAgunan${i}`] = path.join(
-          "../uploads",
+          "/uploads",
           files[`fotoAgunan${i}`][0].filename
         );
         console.log(
@@ -152,12 +173,103 @@ export const createActController = async (req, res) => {
   }
 };
 
+// Controller untuk update act
+export const updateActController = async (req, res) => {
+  try {
+    const actId = req.params.id;
+    const actData = req.body;
+    const files = req.files;
+    const debiturId = req.query.debiturId;
+    const userId = req.user?.id_rm;
+
+    // Logging untuk mencatat permintaan yang masuk
+    logger.info(`Update request received for Act ID: ${actId}`);
+
+    if (!debiturId) {
+      return res
+        .status(400)
+        .json({ message: "Debitur ID is required in query parameters" });
+    }
+
+    const actFields = { debiturId, userId };
+
+    // Logging untuk mencatat data yang dikirim dalam body
+    logger.info("Act data received", actData);
+
+    const fields = actRawData; // Pastikan actRawData sudah didefinisikan sebelumnya
+    fields.forEach((field) => {
+      if (actData[field]) {
+        actFields[field] = actData[field];
+      }
+    });
+
+    for (let i = 1; i <= 6; i++) {
+      if (files[`fotoAgunan${i}`]) {
+        actFields[`fotoAgunan${i}`] = path.join(
+          "/uploads",
+          files[`fotoAgunan${i}`][0].filename
+        );
+
+        // Logging untuk mencatat file yang diunggah
+        logger.info(
+          `Uploaded file for fotoAgunan${i}:`,
+          files[`fotoAgunan${i}`][0].filename
+        );
+      }
+    }
+
+    // Logging sebelum memanggil service untuk update act
+    logger.info(`Updating Act ID: ${actId} with fields:`, actFields);
+
+    const updatedAct = await updateAct(actId, actFields);
+
+    // Logging setelah berhasil memperbarui act
+    logger.info(`Act ID: ${actId} successfully updated`);
+
+    res.status(200).json(updatedAct);
+  } catch (error) {
+    // Logging untuk menangkap dan melaporkan error yang terjadi
+    console.error("Error updating act:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const deleteActController = async (req, res) => {
+  try {
+    const { actId } = req.params;
+
+    if (!actId) {
+      return res.status(400).json({ message: "Act ID is required" });
+    }
+
+    const deletedAct = await deleteAct(actId);
+
+    res.status(200).json({ message: "Act deleted successfully", deletedAct });
+  } catch (error) {
+    console.error("Error deleting act:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
 
 export const getActByDebiturIdController = async (req, res) => {
-  const debiturId = req.query.debiturId;
+  const userId = req.user?.id_rm; // Extract userId from req.user
+
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized: No user ID found" });
+  }
+
   try {
-    const act = await getActByDebiturId(debiturId);
-    res.status(200).json(act);
+    const acts = await getActByDebiturId(userId);
+
+    const decryptedActs = acts.map((act) => ({
+      ...act,
+      debitur: {
+        ...act.debitur,
+        nomorRekening: decryptData(act.debitur.nomorRekening),
+      },
+    }));
+
+    res.status(200).json(decryptedActs);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

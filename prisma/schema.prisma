@@ -6,49 +6,52 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "./generated/client"
 }
 
 datasource db {
-  provider = "postgresql"
-  url = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  provider  = "postgresql"
+  // url = env("DATABASE_URL")  
+  url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
   directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
 }
 
 model User {
-  id_rm     String   @id @default(uuid())
+  id_rm     String    @id @default(uuid())
   nama      String
-  pn        Int   @unique
+  pn        Int       @unique
   password  String
-  role      String   @default("user")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-   acts      Act[]
+  role      String    @default("user")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  debiturs  Debitur[] // Menambahkan relasi dengan Debitur
 }
 
-
 model Debitur {
-  id_debitur    String   @id @default(uuid())
-  kode_debitur  Int   
-  branchCode       String
-  branchOffice     String
-  uker             String
-  namaDebitur      String
-  nomorRekening    String
-  outStanding      Float
-  noTelp           String
-  rmPengelola      String
-  pn               String
-  segmen           String
-  descLoan         String
-  intraEkstra      String
-  kolektibilitas   String
-  tanggalChargeOff DateTime
-  klasifikasiEc    KlasifikasiEC
-  agingPh1         Int?
-  agingPh2         Int?
-  act     Act[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id_debitur         String        @id @default(uuid())
+  kode_debitur       Int
+  branch_code        String
+  branch_office      String
+  uker               String
+  user               User?         @relation(fields: [userId], references: [id_rm])
+  userId             String?
+  pn_pengelola       String
+  nama_debitur       String
+  nomor_rekening     String
+  out_standing       Int
+  segmen             String
+  phone              String
+  desc_loan          String
+  intra_ekstra       String
+  kolektibilitas     String
+  tanggal_charge_off DateTime
+  klasifikasiEc      KlasifikasiEC
+  aging_ph_1         Int?
+  aging_ph_2         Int?
+  non_lelangs        NonLelang[] // Menambahkan relasi dengan NonLelang
+  lelangs            Lelang[] // Menambahkan relasi dengan Lelang
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 }
 
 enum KlasifikasiEC {
@@ -58,27 +61,40 @@ enum KlasifikasiEC {
   HABIS_AGUNAN
 }
 
+model Lelang {
+  id_lelang           String   @id @default(uuid())
+  tindakan            String
+  aktifitas_lelang    String
+  lelang_ke           String
+  nl_lama             String
+  nl_baru             String
+  kelengkapan_berkas  String
+  nomor_tiket         String
+  jumlah_hasil_lelang Int
+  hasil_lelang        String
+  input_web_bri       String
+  alamat_agunan       String
+  fotoAgunan1         String?
+  fotoAgunan2         String?
+  fotoAgunan3         String?
+  fotoAgunan4         String?
+  fotoAgunan5         String?
+  fotoAgunan6         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  debitur             Debitur  @relation(fields: [debiturId], references: [id_debitur]) // Menambahkan relasi dengan Debitur
+  debiturId           String
+}
 
-model Act {
-  id_act               String   @id @default(uuid())
-  debitur              Debitur? @relation(fields: [debiturId], references: [id_debitur])
-  debiturId            String
-  user          User?       @relation(fields: [userId], references: [id_rm])
-  userId        String?
+model NonLelang {
+  id_non_lelang        String   @id @default(uuid())
   tindakan             String
-  kelengkapanBerkas    String
-  lelangKe             String
-  nlLama               String
-  nlBaru               String
-  actifitas_lelang      String
-  nomorTicket          String
-  actifitas_non_lelang   String
+  aktifitas_non_lelang String
   extraordinary        String
-  hasil_lelang          String
-  jumlahHasilLelang    String
-  recoveryNonLelang    String
-  inputWebInfoLelangBri String
-  alamatAgunan         String
+  recovery_non_lelang  String
+  nl_lama              String
+  nl_baru              String
+  alamat_agunan        String
   fotoAgunan1          String?
   fotoAgunan2          String?
   fotoAgunan3          String?
@@ -87,5 +103,6 @@ model Act {
   fotoAgunan6          String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+  debitur              Debitur  @relation(fields: [debiturId], references: [id_debitur]) // Menambahkan relasi dengan Debitur
+  debiturId            String
 }
-

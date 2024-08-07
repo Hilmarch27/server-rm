@@ -19,7 +19,7 @@ export async function register(req, res) {
     // Cek apakah email sudah terdaftar
     const existingUser = await prisma.user.findUnique({ where: { pn } });
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(409).json({ message: "User already exists" });
     }
 
     // Hash password
@@ -54,9 +54,12 @@ export async function login(req, res) {
   const { pn, password } = req.body;
 
   try {
+    console.log("Login request received for PN:", pn); // Log the PN received
+
     // Cari pengguna berdasarkan nomor PN
     const user = await prisma.user.findUnique({ where: { pn } });
     if (!user) {
+      console.log("No user found with PN:", pn); // Log if no user is found
       return res
         .status(401)
         .json({ message: "Invalid personal number or password" });
@@ -65,25 +68,27 @@ export async function login(req, res) {
     // Verifikasi password
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
+      console.log("Password does not match for user with PN:", pn); // Log if password does not match
       return res
         .status(401)
         .json({ message: "Invalid personal number or password" });
     }
 
-    
     const isAdmin = user.role === process.env.ADMIN_ROLE;
+    console.log("User role:", user.role); // Log the user role
 
     // Generate token akses dan refresh token
     const accessToken = generateAccessToken(user.id_rm);
     const refreshToken = generateRefreshToken(user.id_rm);
 
     res.status(200).json({ accessToken, refreshToken, isAdmin });
-    console.log(chalk.green("Login successful"));
+    console.log(chalk.green("Login successful for PN:", pn)); // Log successful login
   } catch (error) {
     console.error("Error logging in:", error);
     res.status(500).json({ message: "Failed to log in" });
   }
 }
+
 
 
 // * POST /auth/refresh

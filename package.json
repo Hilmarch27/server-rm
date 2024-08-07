@@ -6,15 +6,15 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/server.js",
-        "postinstall": "prisma generate",
-    "build": "react-scripts build"
+    "postinstall": "prisma generate",
+    "vercel-build": "prisma generate && prisma migrate deploy"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "@prisma/client": "5.15.0",
+    "@prisma/client": "5.17.0",
     "bcrypt": "^5.1.1",
     "chalk": "^5.3.0",
     "cookie-parser": "^1.4.6",
@@ -24,9 +24,10 @@
     "install": "^0.13.0",
     "joi": "^17.13.1",
     "jsonwebtoken": "^9.0.2",
+    "moment": "^2.30.1",
     "multer": "1.4.5-lts.1",
     "pino": "^9.1.0",
-    "prisma": "^5.14.0",
+    "pino-pretty": "^11.2.1",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
@@ -34,6 +35,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/express": "^4.17.21",
     "@types/uuid": "^9.0.8",
-    "nodemon": "^3.1.1"
+    "nodemon": "^3.1.1",
+    "prisma": "^5.17.0"
   }
 }

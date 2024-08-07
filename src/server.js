@@ -7,6 +7,7 @@ import cors from "cors";
 import chalk from "chalk";
 import path from "path";
 import { fileURLToPath } from "url";
+import logger from "./utils/logger.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,28 +28,14 @@ app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/api", debitRoutes);
 
+
+app.get('/health', (req, res) => {
+  res.send('Alhamdulillah');
+});
+
+
 // Start server
 const server = app.listen(PORT, () => {
-  console.log(chalk.blue(`Server is running on port ${PORT}`));
+  logger.info(chalk.blue(`Server is running on port ${PORT}`));
 });
 
-// Graceful shutdown
-process.on("SIGINT", async () => {
-  console.log(chalk.red("SIGINT signal received: closing HTTP server"));
-  server.close(async () => {
-    console.log(chalk.red("HTTP server closed"));
-    await prisma.$disconnect();
-    console.log(chalk.red("Prisma client disconnected"));
-    process.exit(0);
-  });
-});
-
-process.on("SIGTERM", async () => {
-  console.log(chalk.red("SIGTERM signal received: closing HTTP server"));
-  server.close(async () => {
-    console.log(chalk.red("HTTP server closed"));
-    await prisma.$disconnect();
-    console.log(chalk.red("Prisma client disconnected"));
-    process.exit(0);
-  });
-});

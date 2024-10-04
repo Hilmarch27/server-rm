@@ -22,18 +22,16 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Middleware
 // Enable CORS for your frontend URL and handle preflight requests
-const options = [
-  cors({
-    origin: "*",
-    methods: "*",
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  }),
-];
+// Enable CORS for your frontend URL and handle preflight requests
+app.use(cors({
+  origin: "http://localhost:5173", // Replace with your frontend URL
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Allowed methods
+  allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
+  credentials: true // Allow credentials if needed
+}));
 
-app.use(options);
-
-// app.use(express.json());
+// Handle preflight requests for all routes
+app.options("*", cors());
 
 // Routes
 app.use("/auth", authRoutes);

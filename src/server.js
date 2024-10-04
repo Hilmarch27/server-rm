@@ -22,13 +22,20 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Middleware
 // Enable CORS for your frontend URL and handle preflight requests
+const allowedOrigins = [
+  "http://localhost:5173", // Development URL
+  "https://client-rm.vercel.app", // Production URL
+];
+
 // Enable CORS for your frontend URL and handle preflight requests
-app.use(cors({
-  origin: "http://localhost:5173", // Replace with your frontend URL
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Allowed methods
-  allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
-  credentials: true // Allow credentials if needed
-}));
+app.use(
+  cors({
+    origin: allowedOrigins, // Allow both origins
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Allowed methods
+    allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
+    credentials: true, // Allow credentials if needed
+  })
+);
 
 // Handle preflight requests for all routes
 app.options("*", cors());

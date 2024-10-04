@@ -23,11 +23,26 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 // Middleware
 // Enable CORS for your frontend URL and handle preflight requests
 const corsOptions = {
-  origin: "http://localhost:5173/",
-  credentials: true, //access-control-allow-credentials:true
-  optionSuccessStatus: 200,
+  origin: ["http://localhost:5173", /^(http:\/\/)?localhost(:\d{1,5})?$/],
+  methods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"],
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "X-Access-Token",
+    "Authorization",
+  ],
+  credentials: true,
+  preflightContinue: true, // Allow the OPTIONS response to continue to the actual request
 };
+
+// Apply CORS middleware
 app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options("*", cors(corsOptions));
+
 
 // app.use(express.json());
 

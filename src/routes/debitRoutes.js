@@ -3,18 +3,23 @@
 import express from "express";
 import {
   createMultipleDebiturController,
-  deleteActController,
-  getActByDebiturIdController,
+  createSingleDebiturController,
+  downloadLaporanDebiturCsv,
   getDebitursByLoggedInUserController,
   getDebitursByNamaController,
-  updateActController,
+  // updateActController,
   updateKlasifikasiEcController,
+  uploadExcel,
 } from "../controllers/debiturController.js";
-import { createActController, getDebiturWithActsController } from "../controllers/activityController.js";
+import { createActController, deleteActController, downloadLaporanRMCsv, editActController, getAllAktifitasLelangCounts, getAllAktifitasNonLelangCounts, getDebiturWithActsController, getLelangCountByBranchOffice, getNonLelangCountByBranchOffice } from "../controllers/activityController.js";
 import { authenticateUser } from "../middlewares/authMiddleware.js";
 import {uploadFields} from "../middlewares/multer.js";
+import { downloadAllCsv, getAll } from "../controllers/adminController.js";
+import multer from "multer";
 
 const router = express.Router();
+// Set up multer storage
+const upload = multer({ storage: multer.memoryStorage() });
 
 const fields = [
   { name: "fotoAgunan1", maxCount: 1 },
@@ -28,13 +33,23 @@ const fields = [
 router.get("/debiturs", authenticateUser, getDebitursByLoggedInUserController);
 router.get("/debiturs/:nama", authenticateUser, getDebitursByNamaController);
 router.post("/create-debiturs", authenticateUser, createMultipleDebiturController);
+// Route: Create a single debitur
+router.post("/create-debitur", authenticateUser, createSingleDebiturController);
+
 router.put(
   "/klasifikasi-ec/:id",
   authenticateUser,
   updateKlasifikasiEcController
 );
+router.get("/download-debiturs", authenticateUser,  downloadLaporanDebiturCsv);
+router.post(
+  "/upload-xlsx",
+  authenticateUser,
+  upload.single("file"),
+  uploadExcel
+);
 
-// activity
+//* ================ ACTIVITY ROUTES ==============
 router.post(
   "/create-act",
   authenticateUser,
@@ -42,19 +57,26 @@ router.post(
   createActController
 ); 
 
-router.get("/get-act", authenticateUser, getDebiturWithActsController);
-
-
-
-router.put(
-  "/update-act/:id",
+router.patch(
+  "/edit-act/:actId", // Menggunakan `:actId` untuk menangkap ID dari parameter URL
   authenticateUser,
   uploadFields(fields),
-  updateActController
+  editActController
 );
 
-router.delete("/delete-act/:actId", deleteActController);
+router.get("/get-act", authenticateUser, getDebiturWithActsController);
+router.get("/download-act", authenticateUser, downloadLaporanRMCsv);
 
+router.delete("/delete-act/:id", authenticateUser, deleteActController);
+
+
+//* ============ ADMIN ROUTES ============
+router.get("/get-all", authenticateUser, getAll);
+router.get("/get-lelang", getAllAktifitasLelangCounts);
+router.get("/get-nonlelang", getAllAktifitasNonLelangCounts);
+router.get("/download-csv", downloadAllCsv);
+router.get("/branch-office/lelang", getLelangCountByBranchOffice);
+router.get("/branch-office/non-lelang", getNonLelangCountByBranchOffice);
 
 
 export default router;

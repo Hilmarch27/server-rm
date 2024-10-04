@@ -6,14 +6,13 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "./generated/client"
 }
 
 datasource db {
   provider  = "postgresql"
-  // url = env("DATABASE_URL")  
-  url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
-  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+  url  	    = env("DATABASE_URL")
+  // uncomment next line if you use Prisma <5.10
+  // directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model User {
@@ -29,7 +28,6 @@ model User {
 
 model Debitur {
   id_debitur         String        @id @default(uuid())
-  kode_debitur       Int
   branch_code        String
   branch_office      String
   uker               String
@@ -72,7 +70,7 @@ model Lelang {
   nomor_tiket         String
   jumlah_hasil_lelang Int
   hasil_lelang        String
-  input_web_bri       String
+  input_web_bri       DateTime
   alamat_agunan       String
   fotoAgunan1         String?
   fotoAgunan2         String?

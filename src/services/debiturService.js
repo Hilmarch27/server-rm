@@ -1,4 +1,6 @@
+import { encryptData } from "../utils/aes.js";
 import prisma from "../utils/prismaClient.js";
+import XLSX from "xlsx";
 
 export const getDebitursByLoggedInUser = async (userId) => {
   return prisma.debitur.findMany({
@@ -17,6 +19,12 @@ export const addMultipleDebitur = async (debiturs) => {
   });
 };
 
+// Service: Create a single Debitur
+export const addSingleDebitur = async (debitur) => {
+  return prisma.debitur.create({
+    data: debitur,
+  });
+};
 
 export const updateKlasifikasiEcService = async (id, klasifikasiEc) => {
   try {
@@ -68,12 +76,6 @@ export const updateAct = async (actId, actFields) => {
   return act;
 };
 
-export const deleteAct = async (actId) => {
-  const act = await prisma.act.delete({
-    where: { id_act: actId },
-  });
-  return act;
-};
 
 export const getActByDebiturId = async (userId) => {
   return prisma.act.findMany({
@@ -100,3 +102,45 @@ export const getActByDebiturId = async (userId) => {
     },
   });
 };
+
+// Layanan untuk mengonversi Excel ke JSON dan menyimpan ke database
+export const convertExcelToJsonAndSave = async (fileBuffer, userId) => {
+  // Parse file Excel
+  const workbook = XLSX.read(fileBuffer, { type: "buffer" });
+  const sheetName = workbook.SheetNames[0]; // Mengasumsikan data ada di sheet pertama
+  const worksheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+  // Konversi data berdasarkan schema Prisma
+  const convertedData = worksheet.map((row) => ({
+    aging_ph_1: Number(row.aging_ph_1),
+    aging_ph_2: Number(row.aging_ph_2),
+    branch_code: row.branch_code,
+    branch_office: row.branch_office,
+    desc_loan: row.desc_loan,
+    intra_ekstra: row.intra_ekstra,
+    klasifikasiEc: row.klasifikasiEc, // Mengasumsikan string sesuai dengan enum
+    kolektibilitas: row.kolektibilitas,
+    nama_debitur: row.nama_debitur,
+    nomor_rekening: encryptData(row.nomor_rekening),
+    out_standing: Number(row.out_standing),
+    phone: row.phone,
+    pn_pengelola: row.pn_pengelola,
+    segmen: row.segmen,
+    tanggal_charge_off: new Date(row.tanggal_charge_off), // Konversi ke Date
+    uker: row.uker,
+    userId: userId,
+  }));
+
+  // Simpan data ke dalam database menggunakan Prisma
+  try {
+    const result = await prisma.debitur.createMany({
+      data: convertedData,
+      skipDuplicates: true // Menghindari error jika ada data duplikat
+    });
+    return result;
+  } catch (error) {
+    console.error('Gagal menyimpan data ke database:', error);
+    throw error;
+  }
+};
+

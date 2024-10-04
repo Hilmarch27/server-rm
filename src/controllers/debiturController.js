@@ -2,16 +2,13 @@ import {
   getDebitursByLoggedInUser,
   getDebitursByNama,
   addMultipleDebitur,
-  createAct,
-  getActByDebiturId,
-  updateAct,
-  deleteAct,
   updateKlasifikasiEcService,
+  convertExcelToJsonAndSave,
+  addSingleDebitur,
 } from "../services/debiturService.js";
-import { decryptData, encryptData } from "../utils/aes.js"; 
-import path from "path";
-import logger from "../utils/logger.js";
-
+import { decryptData, encryptData } from "../utils/aes.js";
+import { stringify as csvStringify } from "csv-stringify/sync";
+import formatDate from "../utils/date.js";
 
 export async function getDebitursByLoggedInUserController(req, res) {
   try {
@@ -96,181 +93,150 @@ export async function createMultipleDebiturController(req, res) {
   }
 }
 
+// Controller: Create a single Debitur
+export async function createSingleDebiturController(req, res) {
+  try {
+    // Extract debitur data from the request body
+    const debitur = req.body;
+
+    // Retrieve userId from the authenticated user (assuming it's available in req.user)
+    const userId = req.user?.id_rm;
+
+    console.log("User ID from request:", userId); // Debugging log
+
+    // Validate debitur data
+    if (!debitur || Object.keys(debitur).length === 0) {
+      return res.status(400).json({ message: "Invalid debitur data" });
+    }
+
+    // Encrypt the debitur's nomor_rekening
+    const encryptedDebitur = {
+      ...debitur,
+      nomor_rekening: encryptData(debitur.nomor_rekening),
+      userId, // Add userId from authenticated user
+    };
+
+    console.log("Encrypted Debitur:", encryptedDebitur); // Debugging log
+
+    // Add the debitur to the database
+    const result = await addSingleDebitur(encryptedDebitur);
+
+    // Return success response
+    res.status(201).json({
+      message: "Debitur created successfully",
+      debitur: result,
+    });
+  } catch (error) {
+    console.error("Error creating debitur:", error);
+    res.status(500).json({ message: "Failed to create debitur" });
+  }
+}
+
+
 export const updateKlasifikasiEcController = async (req, res) => {
   const { id } = req.params; // Mengambil id dari parameter URL
   const { klasifikasiEc } = req.body; // Mengambil klasifikasiEc dari request body
 
   try {
     const updatedDebitur = await updateKlasifikasiEcService(id, klasifikasiEc); // Memanggil service untuk memperbarui data
-    res
-      .status(200)
-      .json({
-        message: "Klasifikasi berhasil diperbarui",
-        data: updatedDebitur,
-      }); // Mengirimkan respons yang sesuai
+    res.status(200).json({
+      message: "Klasifikasi berhasil diperbarui",
+      data: updatedDebitur,
+    }); // Mengirimkan respons yang sesuai
     console.log("Klasifikasi updated:", updatedDebitur.klasifikasiEc); // Logging untuk debugging
   } catch (error) {
     console.error(error.message); // Logging error untuk debugging
     res.status(500).json({ message: "Terjadi kesalahan pada server" }); // Mengirimkan respons error
   }
 };
+//? ============ Download CSV ===========
 
-// activity
-export const createActController = async (req, res) => {
-  try {
-    const actData = req.body;
-    const files = req.files;
-    const debiturId = req.query.debiturId; // Mengambil debiturId dari req.query
-    const userId = req.user?.id_rm;
-
-    if (!debiturId) {
-      return res
-        .status(400)
-        .json({ message: "Debitur ID is required in query parameters" });
-    }
-
-    // Inisialisasi objek actFields dengan debiturId dan userId
-    const actFields = { debiturId, userId };
-
-    // Looping untuk memasukkan data dari actRawData
-    const fields = actRawData; // Pastikan actRawData sudah didefinisikan sebelumnya
-    fields.forEach((field) => {
-      if (actData[field]) {
-        actFields[field] = actData[field];
-        console.log(`Set ${field} to:`, actData[field]); // Log setiap field yang diset
-      }
-    });
-
-    // Looping untuk memproses file foto agunan
-    for (let i = 1; i <= 6; i++) {
-      if (files[`fotoAgunan${i}`]) {
-        actFields[`fotoAgunan${i}`] = path.join(
-          "/uploads",
-          files[`fotoAgunan${i}`][0].filename
-        );
-        console.log(
-          `Added fotoAgunan${i} with path:`,
-          actFields[`fotoAgunan${i}`]
-        ); // Log setiap foto agunan yang ditambahkan
-      }
-    }
-
-    // Log actFields yang akan digunakan untuk membuat act
-    console.log("Act fields to be created:", actFields);
-
-    // Memanggil fungsi createAct dengan actFields dan menunggu hasilnya
-    const createdAct = await createAct(actFields);
-
-    // Log act yang berhasil dibuat
-    console.log("Created act:", createdAct);
-
-    // Mengirim respons ke client dengan status 201 dan data act yang baru dibuat
-    res.status(201).json(createdAct);
-  } catch (error) {
-    // Tangani kesalahan yang terjadi dan kirim respons error ke client
-    console.error("Error creating act:", error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Controller untuk update act
-export const updateActController = async (req, res) => {
-  try {
-    const actId = req.params.id;
-    const actData = req.body;
-    const files = req.files;
-    const debiturId = req.query.debiturId;
-    const userId = req.user?.id_rm;
-
-    // Logging untuk mencatat permintaan yang masuk
-    logger.info(`Update request received for Act ID: ${actId}`);
-
-    if (!debiturId) {
-      return res
-        .status(400)
-        .json({ message: "Debitur ID is required in query parameters" });
-    }
-
-    const actFields = { debiturId, userId };
-
-    // Logging untuk mencatat data yang dikirim dalam body
-    logger.info("Act data received", actData);
-
-    const fields = actRawData; // Pastikan actRawData sudah didefinisikan sebelumnya
-    fields.forEach((field) => {
-      if (actData[field]) {
-        actFields[field] = actData[field];
-      }
-    });
-
-    for (let i = 1; i <= 6; i++) {
-      if (files[`fotoAgunan${i}`]) {
-        actFields[`fotoAgunan${i}`] = path.join(
-          "/uploads",
-          files[`fotoAgunan${i}`][0].filename
-        );
-
-        // Logging untuk mencatat file yang diunggah
-        logger.info(
-          `Uploaded file for fotoAgunan${i}:`,
-          files[`fotoAgunan${i}`][0].filename
-        );
-      }
-    }
-
-    // Logging sebelum memanggil service untuk update act
-    logger.info(`Updating Act ID: ${actId} with fields:`, actFields);
-
-    const updatedAct = await updateAct(actId, actFields);
-
-    // Logging setelah berhasil memperbarui act
-    logger.info(`Act ID: ${actId} successfully updated`);
-
-    res.status(200).json(updatedAct);
-  } catch (error) {
-    // Logging untuk menangkap dan melaporkan error yang terjadi
-    console.error("Error updating act:", error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-export const deleteActController = async (req, res) => {
-  try {
-    const { actId } = req.params;
-
-    if (!actId) {
-      return res.status(400).json({ message: "Act ID is required" });
-    }
-
-    const deletedAct = await deleteAct(actId);
-
-    res.status(200).json({ message: "Act deleted successfully", deletedAct });
-  } catch (error) {
-    console.error("Error deleting act:", error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-export const getActByDebiturIdController = async (req, res) => {
-  const userId = req.user?.id_rm; // Extract userId from req.user
-
-  if (!userId) {
-    return res.status(401).json({ error: "Unauthorized: No user ID found" });
-  }
+export const downloadLaporanDebiturCsv = async (req, res) => {
+  const userId = req.user.id_rm;
 
   try {
-    const acts = await getActByDebiturId(userId);
-
-    const decryptedActs = acts.map((act) => ({
-      ...act,
-      debitur: {
-        ...act.debitur,
-        nomorRekening: decryptData(act.debitur.nomorRekening),
-      },
+    const debiturs = await getDebitursByLoggedInUser(userId);
+    const serializedDebiturs = debiturs.map((debitur) => ({
+      ...debitur,
+      tanggal_charge_off: formatDate(debitur.tanggal_charge_off),
+      nomor_rekening: decryptData(debitur.nomor_rekening),
     }));
 
-    res.status(200).json(decryptedActs);
+    // Format the data to include fields from Debitur, Lelang, and NonLelang
+    const formattedDebiturs = serializedDebiturs.map((debitur, idx) => {
+      return {
+        No: idx + 1,
+        "Branch Code": debitur.branch_code || "kosong",
+        "Branch Office": debitur.branch_office || "kosong",
+        "Unit Kerja": debitur.uker || "kosong",
+        "PN Pengelola": debitur.pn_pengelola || "kosong",
+        "Nama Debitur": debitur.nama_debitur || "kosong",
+        "Nomor Rekening": debitur.nomor_rekening || "kosong",
+        Outstanding: debitur.out_standing || "kosong",
+        Segmen: debitur.segmen || "kosong",
+        Phone: debitur.phone || "kosong",
+        "Deskripsi Loan": debitur.desc_loan || "kosong",
+        "Intra Ekstra": debitur.intra_ekstra || "kosong",
+        Kolektibilitas: debitur.kolektibilitas || "kosong",
+        "Tanggal Charge Off": debitur.tanggal_charge_off || "kosong", // Tidak ada .toISOString()
+        "Klasifikasi EC": debitur.klasifikasiEc || "kosong",
+        "Aging PH 1": debitur.aging_ph_1 || "kosong",
+        "Aging PH 2": debitur.aging_ph_2 || "kosong",
+      };
+    });
+
+    // Define the columns and their order for the CSV
+    const columns = [
+      "No",
+      "Kode Debitur",
+      "Branch Code",
+      "Branch Office",
+      "Unit Kerja",
+      "PN Pengelola",
+      "Nama Debitur",
+      "Nomor Rekening",
+      "Outstanding",
+      "Segmen",
+      "Phone",
+      "Deskripsi Loan",
+      "Intra Ekstra",
+      "Kolektibilitas",
+      "Tanggal Charge Off",
+      "Klasifikasi EC",
+      "Aging PH 1",
+      "Aging PH 2",
+    ];
+
+    // Generate the CSV string
+    const csv = csvStringify(formattedDebiturs, { header: true, columns });
+
+    // Send the CSV file as a response
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", 'attachment; filename="debiturs.csv"');
+    res.status(200).send(csv);
   } catch (error) {
+    console.error("Error retrieving debiturs:", error);
     res.status(500).json({ error: error.message });
   }
-}
+};
+
+
+export const uploadExcel = async (req, res) => {
+  const userId = req.user.id_rm; // Ambil userId dari session pengguna
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Tidak ada file yang diunggah" });
+    }
+
+    // Konversi dan simpan data Excel ke database
+    const result = await convertExcelToJsonAndSave(req.file.buffer, userId);
+
+    // Kirim respons berhasil
+    res
+      .status(200)
+      .json({ message: "Data berhasil diunggah dan disimpan", data: result });
+  } catch (error) {
+    console.log("Gagal memproses file:", error);
+    res.status(500).json({ message: "Gagal memproses file", error });
+  }
+};

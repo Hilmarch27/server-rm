@@ -36,7 +36,6 @@ const corsOptions = {
   credentials: true,
   preflightContinue: true, // Allow the OPTIONS response to continue to the actual request
 };
-
 // Apply CORS middleware
 app.use(cors(corsOptions));
 
